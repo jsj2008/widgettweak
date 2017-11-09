@@ -1,0 +1,9 @@
+Package: com.softsec.blocktesttweak
+Name: blocktest_ios8_tweak
+Depends: mobilesubstrate
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Block test platform tweak application.
+Maintainer: Leo
+Author: Leo
+Section: Tweaks
