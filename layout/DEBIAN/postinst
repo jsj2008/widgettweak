@@ -1,0 +1,7 @@
+#!/bin/bash
+chmod 777 /Applications/BlockTest.app
+chmod 777 /Applications/BlockTest.app/BlockTest
+chmod 4777 /Applications/BlockTest.app/BlockTest_
+chown root.wheel /Applications/BlockTest.app
+chown root.wheel /Applications/BlockTest.app/BlockTest
+chown root.wheel /Applications/BlockTest.app/BlockTest_
