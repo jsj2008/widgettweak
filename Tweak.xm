@@ -40,7 +40,10 @@ int r=0;//模拟点击的pathindex
 {
     NSLog(@"*************** in spring board ***********");
     %orig;
+<<<<<<< HEAD
     NSLog(@"hello");
+=======
+>>>>>>> bcfcf0a6df91bf3ea6a7991492c044dcbf6fb557
 
     
         //创建偏好文件
