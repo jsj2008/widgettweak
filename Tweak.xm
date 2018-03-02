@@ -21,6 +21,11 @@ extern const CFStringRef kIOSurfaceBytesPerRow;
 extern const CFStringRef kIOSurfaceBytesPerElement;
 extern const CFStringRef kIOSurfacePixelFormat;
 
+#define TOUCH_PREFERENCE @"/var/mobile/Library/Preferences/com.lw.TouchTest.plist"
+#define TOUCH_ABS_PREFERENCE @"/var/mobile/Library/Preferences/com.lw.TouchABS.plist"
+#define TOUCH_RE_PREFERENCE @"/var/mobile/Library/Preferences/com.lw.TouchRE.plist"
+#define TOUCH_WIDGET @"/var/mobile/Library/Preferences/com.lw.TouchWidget.plist"
+
 @interface SBScreenShotter : NSObject
 + (id)sharedInstance;
 - (void)saveScreenshot:(_Bool)arg1;
@@ -32,18 +37,294 @@ extern const CFStringRef kIOSurfacePixelFormat;
     kIOSurfaceLockAvoidSync =0x00000002
 };
 */
+
+
+%hook UIWindow
+%new
+-(NSDictionary *)getAbsFrame:(NSString *)type userInfo:(NSDictionary *)userInfo actionInfo:(NSDictionary *)actionInfo
+{
+	//获取点击信息
+	NSLog(@"each UI enter getAbsFrame function!!!");
+	NSLog(@"each UI userInfo is %@",userInfo);
+	NSString *touchText = [actionInfo objectForKey:@"text"];
+	[touchText stringByReplacingOccurrencesOfString:@"U" withString:@"u"];
+	NSLog(@"each UI in getAbsFrame actionInfo is %@",actionInfo);
+	NSLog(@"each UI out of sleep");
+    NSString *widgetSet = [userInfo objectForKey:@"widgetSet"];
+
+     NSArray *UIArray_temp1 = [widgetSet componentsSeparatedByString:@"\n"];
+     int count=[UIArray_temp1 count];
+     NSMutableArray *UIArray = [NSMutableArray arrayWithCapacity:5];
+     int count_temp = 0;
+
+     while(count_temp < count -1 )
+     {
+        NSString *tmp = [UIArray_temp1 objectAtIndex:count_temp];
+//		NSLog(@"each UI tmp is %@",tmp);
+		int flag = 0;
+		 //Fetch text
+        NSString *text;
+        int text_s = (int)([tmp rangeOfString:@"'"].location+1);
+        if (text_s == 0)
+        {
+            text=nil;
+        }
+        else
+        {
+            NSString *text_start = [tmp substringFromIndex:text_s];
+            int text_e = (int)([text_start rangeOfString:@"'"].location);
+            text = [text_start substringToIndex:text_e];
+            NSLog(@"each UI text exists!!!");
+            NSLog(@"each UI text is %@",text);
+			if([text rangeOfString:touchText].location != NSNotFound)
+			{
+				NSLog(@"each UI xinhua net get");
+				flag = 1;
+			}
+			else if ([text rangeOfString:@"评论"].location != NSNotFound)
+			{
+				NSLog(@"each UI pinglun get");
+			}
+        }
+        int tail = (int)([tmp rangeOfString:@");"].location+1);
+        NSString *slice_tmp = [tmp substringToIndex:tail];
+        NSString *slice = [slice_tmp stringByReplacingOccurrencesOfString:@"|" withString:@""];
+ //       NSLog(@"each UI:%@",slice);
+
+        //Fetch UI Name
+        int Name_start = (int)([slice rangeOfString:@"<"].location + 1);
+        if (Name_start == 0 )
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *nameStart = [slice substringFromIndex:Name_start];
+        int Name_end = (int)([nameStart rangeOfString:@":"].location);
+        if(Name_end == -1)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Name = [nameStart substringToIndex:Name_end];
+        int level_num = floor(Name_start/4);
+        NSString *level = [[NSString alloc]initWithFormat:@"%d",level_num];
+        //NSLog(@"each UI Name is %@",Name);
+        NSString *stringWithoutName = [nameStart substringFromIndex:Name_end];
+        //NSLog(@"each UI level is %@",level);
+
+        //Fetch UI address
+        int Address_start = (int)[stringWithoutName rangeOfString:@"0x"].location;
+        if(Address_start == -1)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *addressStart = [stringWithoutName substringFromIndex:Address_start];
+        int Address_end = (int)([addressStart rangeOfString:@";"].location);
+        if(Address_end == -1)
+        {
+                count_temp ++;
+                continue;
+	  	}
+        NSString *Address = [addressStart substringToIndex:Address_end];
+        //NSLog(@"each UI Address is %@",Address);
+        NSString *stringWithoutAddress = [addressStart substringFromIndex:Address_end];
+
+        //Fetch Position_X
+        int Position_X_start = (int)([stringWithoutAddress rangeOfString:@"("].location + 1);
+        if(Position_X_start == 0)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Position_Xstart = [stringWithoutAddress substringFromIndex:Position_X_start];
+        int Position_X_end = (int)([Position_Xstart rangeOfString:@" "].location);
+        if(Position_X_end == -1)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Position_X = [Position_Xstart substringToIndex:Position_X_end];
+        NSString *stringWithoutPosition_X = [Position_Xstart substringFromIndex:Position_X_end];
+        //NSLog(@"each UI Position_X is %@",Position_X);
+
+        //Fetch Position_Y
+        int Position_Y_start = (int)([stringWithoutPosition_X rangeOfString:@" "].location + 1);
+        if(Position_Y_start == 0)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Position_Ystart = [stringWithoutPosition_X substringFromIndex:Position_Y_start];
+        int Position_Y_end = (int)([Position_Ystart rangeOfString:@";"].location);
+        if(Position_Y_end == -1)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Position_Y = [Position_Ystart substringToIndex:Position_Y_end];
+        NSString *stringWithoutPosition_Y = [Position_Ystart substringFromIndex:Position_Y_end];
+        //NSLog(@"each UI Position_Y is %@",Position_Y);
+
+        //Fetch Size_X
+        int Size_X_start = (int)([stringWithoutPosition_Y rangeOfString:@" "].location + 1);
+        if(Size_X_start == 0)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Size_Xstart = [stringWithoutPosition_Y substringFromIndex:Size_X_start];
+        int Size_X_end = (int)([Size_Xstart rangeOfString:@" "].location);
+if(Size_X_end == -1)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Size_X = [Size_Xstart substringToIndex:Size_X_end];
+        NSString *stringWithoutSize_X = [Size_Xstart substringFromIndex:Size_X_end];
+        //NSLog(@"each UI Size_X is %@",Size_X);
+
+        //Fetch Size_Y
+         int Size_Y_start = (int)([stringWithoutSize_X rangeOfString:@" "].location + 1);
+        if(Size_Y_start == 0)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Size_Ystart = [stringWithoutSize_X substringFromIndex:Size_Y_start];
+        int Size_Y_end = (int)([Size_Ystart rangeOfString:@")"].location);
+        if(Size_Y_end == -1)
+        {
+                count_temp ++;
+                continue;
+        }
+        NSString *Size_Y = [Size_Ystart substringToIndex:Size_Y_end];
+       // NSString *stringWithoutSize_Y = [Size_Ystart substringFromIndex:Size_Y_end];
+       // NSLog(@"each UI Size_Y is %@\n",Size_Y);
+
+//		NSLog(@"text is %@",text);		
+//      NSLog(@"each UI Name:%@ Address:%@ Position_X:%@ Position_Y:%@ Size_X:%@ Size_Y:%@ level:%@",Name,Address,Position_X,Position_Y,Size_X,Size_Y,level);
+//      NSDictionary* dict = [NSDictionary dictionaryWithObjectsAndKeys:Name, @"Name", Address, @"Address", Position_X, @"Position_X", Position_Y, @"Position_Y", Size_X, @"Size_X", Size_Y, @"Size_Y", level, @"level", nil];
+        NSDictionary* dict = [NSDictionary dictionaryWithObjectsAndKeys:Name,@"Name",Address,@"Address",Position_X,@"Position_X",Position_Y,@"Position_Y",Size_X,@"Size_X",Size_Y,@"Size_Y",level,@"level",text,@"text",nil];
+        [UIArray addObject:dict];
+        int UI_count = [UIArray count];
+        int parentNum = 0;
+		NSString *UIParent;
+		if(flag==1)
+		{
+//寻找控件的父节点
+	        for (int j = UI_count -1; j>=0;j --)
+    	    {
+        	        if([[UIArray[j] valueForKey:@"level"] intValue]==(level_num - 1))
+            	    {
+               	            UIParent = [UIArray[j] valueForKey:@"Name"];
+                	        parentNum = j;
+                // 	        NSLog(@"each UIParent is %@",UIParent);
+        //          	    NSLog(@"each UI level = %@ Position_X is %@ Position_Y is %@ Size_X is %@ Size_Y is %@ Address is %@\n",[UIArray[parentNum]valueForKey:@"level"],[UIArray[parentNum] valueForKey:@"Position_X"],[UIArray[parentNum] valueForKey:@"Position_Y"],[UIArray[parentNum] valueForKey:@"Size_X"],[UIArray[parentNum] valueForKey:@"Size_Y"],[UIArray[parentNum] valueForKey:@"Address"]);
+                       	    break;
+               		 }	
+    	   }
+
+       		 //根据父节点的确定控件的绝对坐标
+     	   double abs_Position_X = [Position_X floatValue];
+      	   double abs_Position_Y = [Position_Y floatValue];
+    	   while([[UIArray[parentNum] valueForKey:@"Position_X"] intValue ] != 0 || [[UIArray[parentNum] valueForKey:@"Position_Y"] intValue ] != 0 || [[UIArray[parentNum] valueForKey:@"Size_X"] intValue ] != 320 || [[UIArray[parentNum] valueForKey:@"Size_Y"] intValue ] != 568 )
+      	  {
+        	 for (int k = parentNum; k>=0;k --)
+            	    {
+                	        if([[UIArray[k] valueForKey:@"level"] intValue]==(level_num - 1)  )
+                    	    {
+                        	//      NSString *UIParent = [UIArray[k] valueForKey:@"Name"];
+                            	     parentNum = k;
+                        //  	     NSLog(@"each UI in abs level = %@ Position_X is %@ Position_Y is %@ Size_X is %@ Size_Y is %@\n",[UIArray[parentNum]valueForKey:@"level"],[UIArray[parentNum] valueForKey:@"Position_X"],[UIArray[parentNum] valueForKey:@"Position_Y"],[UIArray[parentNum] valueForKey:@"Size_X"],[UIArray[parentNum] valueForKey:@"Size_Y"]);
+                            	    level_num --;
+                               		 break;
+                      		  }
+            	    }
+                abs_Position_X = abs_Position_X + [[UIArray[parentNum] valueForKey:@"Position_X"] floatValue];
+                abs_Position_Y = abs_Position_Y + [[UIArray[parentNum] valueForKey:@"Position_Y"] floatValue];
+        //      NSLog(@"each UI in for Position_X is %@ Position_Y is %@",[UIArray[parentNum] valueForKey:@"Position_X"],[UIArray[parentNum] valueForKey:@"Position_Y"]);
+        //      NSLog(@"each UI  in for abs_Postion_X is %f    abs_Position_Y is %f",abs_Position_X,abs_Position_Y);
+      	  }
+		abs_Position_X = abs_Position_X + [Size_X intValue]/2;
+		abs_Position_Y = abs_Position_Y + [Size_Y intValue]/2;
+		NSString *abs_X = [NSString stringWithFormat:@"%f",abs_Position_X];
+		NSString *abs_Y = [NSString stringWithFormat:@"%f",abs_Position_Y];
+        NSLog(@"each UI abs_Position_X = %f   abs_Position_Y = %f\n\n\n",abs_Position_X,abs_Position_Y);
+        NSLog(@"each UI \n\n\n");
+		NSLog(@"each UI name = %@",Name);
+        NSLog(@"each UI \n\n\n");
+//		NSLog(@"each UI Position_X is %@    each UI Position_Y is %@",Position_X,Position_Y);
+		
+		NSDictionary *resultDic = [NSDictionary dictionaryWithObjectsAndKeys:abs_X,@"xPoint",abs_Y,@"yPoint",nil];
+		return resultDic;
+		}
+		count_temp ++;			
+		
+	}
+	NSLog(@"each UI getabs will return ");
+	return nil;
+}
+
+%end
+
+
+%hook UIViewController
+
+CPDistributedMessagingCenter *simulatetouch_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
+int lock =0;
+
+-(void)viewDidAppear:(BOOL)animated
+{
+	%orig;
+	NSLog(@"each UI in viewDidAppear");
+	if(lock ==0)
+	{
+		rocketbootstrap_distributedmessagingcenter_apply(simulatetouch_Center);
+		lock=1;
+	}
+	 NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+     if([[waitInfo objectForKey:@"switch" ]isEqualToString:@"NO"]&&[[waitInfo objectForKey:@"touch"]isEqualToString:@"YES"] )
+      {
+			NSLog(@"each UI in viewDidAppear if ");
+			 NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(recursiveDescription)];
+			NSLog(@"each UI in viewDidAppear sig is %@",signature);
+   			 NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+    		//设置方法调用者
+   		 	invocation.target =  [UIApplication sharedApplication].keyWindow;
+    		//注意：这里的方法名一定要与方法签名类中的方法一致
+  	 		 invocation.selector = @selector(recursiveDescription);
+   			 //这里的Index要从2开始，以为0跟1已经被占据了，分别是self（target）,selector(_cmd)
+      	 /* NSString *type = @"111";
+       	 [invocation setArgument:&type atIndex:2];
+       	 [invocation setArgument:&text atIndex:3];	*/
+			[invocation invoke];
+   		 NSString *res = nil;
+   			 if (signature.methodReturnLength != 0) {//有返回值
+          //将返回值赋值给res
+        		  [invocation getReturnValue:&res];
+  			      }
+ 		   NSString *widgetSet = res;
+    		 NSDictionary *widgetInfo = [[NSDictionary alloc]initWithObjectsAndKeys:widgetSet,@"widgetSet",nil];
+    		[simulatetouch_Center sendMessageName:@"simulatetouchText" userInfo:widgetInfo];
+			[waitInfo setValue:@"YES" forKey:@"switch"];
+			[waitInfo setValue:@"NO" forKey:@"touch"];
+			[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+		}
+}
+%end
+
 %hook SpringBoard
 
 int r=0;//模拟点击的pathindex
+NSDictionary *actionInfo;
+BOOL back_flag=NO;
 
 -(void)applicationDidFinishLaunching:(id)application 
 {
     NSLog(@"*************** in spring board ***********");
     %orig;
-<<<<<<< HEAD
     NSLog(@"hello");
-=======
->>>>>>> bcfcf0a6df91bf3ea6a7991492c044dcbf6fb557
 
     
         //创建偏好文件
@@ -88,6 +369,7 @@ int r=0;//模拟点击的pathindex
     NSLog(@"后台启动程序服务器开启");
 
 
+
     //simulatetouch
     CPDistributedMessagingCenter *simulatetouch_center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
     if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
@@ -98,10 +380,56 @@ int r=0;//模拟点击的pathindex
     [simulatetouch_center registerForMessageName:@"simulatetouchDown" target:self selector:@selector(simulateTouch:userInfo:)];
     [simulatetouch_center registerForMessageName:@"simulatetouchUp" target:self selector:@selector(simulateTouch:userInfo:)];
     [simulatetouch_center registerForMessageName:@"simulateSwipe" target:self selector:@selector(simulateTouch:userInfo:)];
+	[simulatetouch_center registerForMessageName:@"simulatetouchText" target:self selector:@selector(simulateTouchText:userInfo:)];
+	[simulatetouch_center registerForMessageName:@"ReadScript" target:self selector:@selector(readscript:userInfo:)];
+	[simulatetouch_center registerForMessageName:@"getWidget" target:self selector:@selector(getAbsFrame:userInfo:)];
     NSLog(@"模拟点击服务器开启");
 
 
 }
+
+
+
+
+%new
+-(void)readscript:(NSString *)type userInfo:(NSDictionary *)userInfo
+{
+	NSArray *array = [userInfo objectForKey:@"task"];
+	NSString *appBundle = [userInfo objectForKey:@"Bundle"];
+	NSLog(@"each UI appBundle is %@",appBundle);
+	NSLog(@"each UI in tweak array is %@",array);
+	int count = [array count];
+	NSLog(@"each UI count is %d",count);
+	dispatch_queue_t read_queue = dispatch_queue_create("readscript", nil);
+    dispatch_async(read_queue, ^{
+	int count_temp=0;
+	while(count_temp < count)
+	{
+		NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+//		NSLog(@"each UI waitInfo is %@",waitInfo);
+		if([[waitInfo objectForKey:@"switch" ]isEqualToString:@"NO"] && count_temp !=0 )
+		{	
+			[NSThread sleepForTimeInterval:2];
+			continue;
+		}
+		if([[waitInfo objectForKey:@"touch"]isEqualToString:@"NO"]&& count_temp !=0)
+		{
+			[NSThread sleepForTimeInterval:2];
+			continue;
+		}
+		actionInfo = [array[count_temp] copy];
+		NSLog(@"each UI in readscript actionInfo is %@",actionInfo);	
+		NSDictionary *dic = [[NSDictionary alloc]initWithObjectsAndKeys:@"NO",@"switch",@"YES",@"touch",@"NO",@"back",nil];
+		[dic writeToFile:TOUCH_PREFERENCE atomically:YES];
+		count_temp ++;		
+	}
+	back_flag=YES;
+	
+	});
+	
+}
+
+
 
 %new
 - (void)canGetScreenCallback_app:(NSString *)name userInfo:(NSDictionary *)userInfo{
@@ -161,7 +489,7 @@ int r=0;//模拟点击的pathindex
     
 
      NSLog(@"截图  图像%@",image);
-       if (![UIImagePNGRepresentation(image) writeToFile:imagefilename atomically:YES]) {
+      if (![UIImagePNGRepresentation(image) writeToFile:imagefilename atomically:YES]) {
             
             UIAlertView *alert = [[UIAlertView alloc]initWithTitle:@"提示" message:@"截图失败" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
             [alert show];
@@ -188,8 +516,8 @@ int r=0;//模拟点击的pathindex
     
     [self launchApplicationWithIdentifier:appBundle suspended:NO];
     }
-    
-    
+  
+
     
 }
 
@@ -201,14 +529,67 @@ int r=0;//模拟点击的pathindex
     [self launchApplicationWithIdentifier:appBundle suspended:NO];
     
     
-    
+}
+
+%new
+- (void)simulateTouchText:(NSString *)type userInfo:(NSDictionary *)userInfo
+{
+	NSDictionary *TouchAction = [actionInfo copy];
+	NSLog(@"each UI in Text touch actionInfo is %@",TouchAction);
+	NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(getAbsFrame:userInfo:actionInfo:)];
+		NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+		//设置方法调用者
+		invocation.target = [[UIApplication sharedApplication]keyWindow];
+		//注意：这里的方法名一定要与方法签名类中的方法一致
+		invocation.selector = @selector(getAbsFrame:userInfo:actionInfo:);
+		//这里的Index要从2开始，以为0跟1已经被占据了，分别是self（target）,selector(_cmd)
+		[invocation setArgument:&type atIndex:2];
+		[invocation setArgument:&userInfo atIndex:3];
+		[invocation setArgument:&TouchAction atIndex:4];
+			 //3、调用invoke方法
+			NSLog(@"each UI in controller new queue");
+        	[invocation invoke];
+        	NSDictionary *res = nil;
+        	if (signature.methodReturnLength != 0) {//有返回值
+            	//将返回值赋值给res
+            	[invocation getReturnValue:&res];
+        	}
+        	NSDictionary *abs_point = res;
+        	NSLog(@"each UI in if abs_point is %@",abs_point);
+	CPDistributedMessagingCenter *get_absFrame_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
+            //7.0+
+            	rocketbootstrap_distributedmessagingcenter_apply(get_absFrame_Center);
+      	}
+   	[get_absFrame_Center sendMessageName:@"simulatetouchDown" userInfo:abs_point];
+	NSLog(@"each UI touchDown complete!");
+	dispatch_queue_t read_queue = dispatch_queue_create("readscript", nil);
+    dispatch_async(read_queue, ^{	
+	[NSThread sleepForTimeInterval:2];
+    [get_absFrame_Center sendMessageName:@"simulatetouchUp" userInfo:abs_point];
+	NSLog(@"each UI touchUp complete!");
+	});
+	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+	[waitInfo setValue:@"YES" forKey:@"touch"];
+	if(back_flag==YES)
+	{
+		[waitInfo setValue:@"YES" forKey:@"back"];
+	}
+	[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+
+
+
+	
 }
 
 
 %new
 - (void)simulateTouch:(NSString *)type userInfo:(NSDictionary *)userInfo
 {
-    NSLog(@"*************Touch type = %@***********",type);
+    NSLog(@"*************each UI Touch type = %@***********",type);
+	NSDictionary *dic_be=[NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+    [dic_be setValue:@"YES" forKey:@"touchcheck"];
+    [dic_be writeToFile:TOUCH_PREFERENCE atomically:YES];
     if([type isEqualToString:[NSString stringWithFormat:@"simulatetouchDown"]])
     {
         NSString *xPoint = [NSString stringWithFormat:@"%@",[userInfo objectForKey:@"xPoint"]];
@@ -219,9 +600,9 @@ int r=0;//模拟点击的pathindex
         r = [SimulateTouch simulateTouch:0 atPoint:touchPoint withType:STTouchDown];
         if (r == 0)
         {
-            NSLog(@"iOSREError: Simutale touch down failed at (%f, %f).\n",x,y);
+            NSLog(@"each UI  iOSREError: Simutale touch down failed at (%f, %f).\n",x,y);
         }
-        NSLog(@"xPoint = %@ ,yPoint = %@",xPoint,yPoint);
+        NSLog(@"each UI in touchDown xPoint = %@ ,yPoint = %@",xPoint,yPoint);
 
     }else if([type isEqualToString:[NSString stringWithFormat:@"simulatetouchUp"]])
     {
@@ -233,9 +614,9 @@ int r=0;//模拟点击的pathindex
         int m = [SimulateTouch simulateTouch:r atPoint:touchPoint withType:STTouchUp];
         if (m == 0)
         {
-            NSLog(@"iOSREError: Simutale touch up failed at (%f, %f).\n",x,y);
+            NSLog(@"each UI iOSREError: Simutale touch up failed at (%f, %f).\n",x,y);
         }
-        NSLog(@"xPoint = %@ ,yPoint = %@",xPoint,yPoint);
+        NSLog(@"each UI in touchUP xPoint = %@ ,yPoint = %@",xPoint,yPoint);
 
     }else if([type isEqualToString:[NSString stringWithFormat:@"simulateSwipe"]])
     {
@@ -264,9 +645,8 @@ int r=0;//模拟点击的pathindex
 
 }
 
-
-
 %end
+
 /*
 %hook SBSMSClass0Alert
 +(void)registerForAlerts
@@ -289,7 +669,7 @@ int r=0;//模拟点击的pathindex
         %orig;
     }
  }
-%end
+
 
 */
 

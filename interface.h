@@ -141,4 +141,8 @@
 ///////////SB///////////////
 @interface SpringBoard
 -(BOOL)launchApplicationWithIdentifier:(id)identifier suspended:(BOOL)suspended;
+-(NSDictionary *)getAbsFrame:(NSString *)type userInfo:(NSDictionary *)userInfo;
+-(id)instanceMethodSignatureForSelector:(SEL)aselector;
 @end
+
+

@@ -25,6 +25,8 @@
 - (void)AddMsg:(id)arg1 MsgWrap:(id)arg2;
 @end
 
+//d
+
 %hook MicroMessengerAppDelegate
 
 - (void)applicationWillEnterForeground:(id)arg1

@@ -1,12 +1,8 @@
 export ARCHS = armv7 armv7s arm64
-<<<<<<< HEAD
 export TARGET = iphone:9.2:9.0
 export THEOS = /opt/theos
 export THEOS_MAKE_PATH = /opt/theos/makefiles 
-=======
-export TARGET = iphone:8.4:8.0
 
->>>>>>> bcfcf0a6df91bf3ea6a7991492c044dcbf6fb557
 
 include $(THEOS)/makefiles/common.mk
 
