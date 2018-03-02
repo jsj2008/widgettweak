@@ -25,7 +25,7 @@
 - (void)AddMsg:(id)arg1 MsgWrap:(id)arg2;
 @end
 
-//d
+//d git test
 
 %hook MicroMessengerAppDelegate
 
