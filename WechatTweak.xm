@@ -33,7 +33,7 @@
 {
 
     %orig;
-    
+	NSLog(@"111");    
     NSLog(@"******************applicationWillEnterForeground wechat************* ");
     //NSString *Recipient = @"wxj1992hs";
     //NSString *Body = @"hello";

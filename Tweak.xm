@@ -49,7 +49,6 @@ extern const CFStringRef kIOSurfacePixelFormat;
 	NSString *touchText = [actionInfo objectForKey:@"text"];
 	[touchText stringByReplacingOccurrencesOfString:@"U" withString:@"u"];
 	NSLog(@"each UI in getAbsFrame actionInfo is %@",actionInfo);
-	NSLog(@"each UI out of sleep");
     NSString *widgetSet = [userInfo objectForKey:@"widgetSet"];
 
      NSArray *UIArray_temp1 = [widgetSet componentsSeparatedByString:@"\n"];
@@ -60,7 +59,6 @@ extern const CFStringRef kIOSurfacePixelFormat;
      while(count_temp < count -1 )
      {
         NSString *tmp = [UIArray_temp1 objectAtIndex:count_temp];
-//		NSLog(@"each UI tmp is %@",tmp);
 		int flag = 0;
 		 //Fetch text
         NSString *text;
@@ -212,15 +210,13 @@ if(Size_X_end == -1)
 		NSString *UIParent;
 		if(flag==1)
 		{
-//寻找控件的父节点
+			//寻找控件的父节点
 	        for (int j = UI_count -1; j>=0;j --)
     	    {
         	        if([[UIArray[j] valueForKey:@"level"] intValue]==(level_num - 1))
             	    {
                	            UIParent = [UIArray[j] valueForKey:@"Name"];
                 	        parentNum = j;
-                // 	        NSLog(@"each UIParent is %@",UIParent);
-        //          	    NSLog(@"each UI level = %@ Position_X is %@ Position_Y is %@ Size_X is %@ Size_Y is %@ Address is %@\n",[UIArray[parentNum]valueForKey:@"level"],[UIArray[parentNum] valueForKey:@"Position_X"],[UIArray[parentNum] valueForKey:@"Position_Y"],[UIArray[parentNum] valueForKey:@"Size_X"],[UIArray[parentNum] valueForKey:@"Size_Y"],[UIArray[parentNum] valueForKey:@"Address"]);
                        	    break;
                		 }	
     	   }
@@ -273,21 +269,23 @@ if(Size_X_end == -1)
 
 CPDistributedMessagingCenter *simulatetouch_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
 int lock =0;
-
+//显示每个组件的时候调用
 -(void)viewDidAppear:(BOOL)animated
 {
 	%orig;
 	NSLog(@"each UI in viewDidAppear");
+	//当且仅当第一次显示组件的时候注册simulatetouch_Center
 	if(lock ==0)
 	{
 		rocketbootstrap_distributedmessagingcenter_apply(simulatetouch_Center);
 		lock=1;
 	}
 	 NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+	//读取一条动作记录之后，调用recursiveDescription获取当前界面的控件树
      if([[waitInfo objectForKey:@"switch" ]isEqualToString:@"NO"]&&[[waitInfo objectForKey:@"touch"]isEqualToString:@"YES"] )
       {
 			NSLog(@"each UI in viewDidAppear if ");
-			 NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(recursiveDescription)];
+		    NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(recursiveDescription)];
 			NSLog(@"each UI in viewDidAppear sig is %@",signature);
    			 NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
     		//设置方法调用者
@@ -295,17 +293,17 @@ int lock =0;
     		//注意：这里的方法名一定要与方法签名类中的方法一致
   	 		 invocation.selector = @selector(recursiveDescription);
    			 //这里的Index要从2开始，以为0跟1已经被占据了，分别是self（target）,selector(_cmd)
-      	 /* NSString *type = @"111";
-       	 [invocation setArgument:&type atIndex:2];
-       	 [invocation setArgument:&text atIndex:3];	*/
+      		 /* NSString *type = @"111";
+       	 	[invocation setArgument:&type atIndex:2];
+       	 	[invocation setArgument:&text atIndex:3];	*/
 			[invocation invoke];
-   		 NSString *res = nil;
+   		 	NSString *res = nil;
    			 if (signature.methodReturnLength != 0) {//有返回值
-          //将返回值赋值给res
+          	//将返回值赋值给res
         		  [invocation getReturnValue:&res];
   			      }
- 		   NSString *widgetSet = res;
-    		 NSDictionary *widgetInfo = [[NSDictionary alloc]initWithObjectsAndKeys:widgetSet,@"widgetSet",nil];
+   		    NSString *widgetSet = res;
+    		NSDictionary *widgetInfo = [[NSDictionary alloc]initWithObjectsAndKeys:widgetSet,@"widgetSet",nil];
     		[simulatetouch_Center sendMessageName:@"simulatetouchText" userInfo:widgetInfo];
 			[waitInfo setValue:@"YES" forKey:@"switch"];
 			[waitInfo setValue:@"NO" forKey:@"touch"];
@@ -355,6 +353,7 @@ BOOL back_flag=NO;
     [ScreenShot_center_app runServerOnCurrentThread];
     [ScreenShot_center_app registerForMessageName:@"ScreenShot-app" target:self selector:@selector(canGetScreenCallback_app:userInfo:)];
     NSLog(@"截屏服务器开启");
+	NSLog(@"11");
 
 
 
@@ -390,7 +389,7 @@ BOOL back_flag=NO;
 
 
 
-
+//读取脚本
 %new
 -(void)readscript:(NSString *)type userInfo:(NSDictionary *)userInfo
 {
@@ -400,11 +399,13 @@ BOOL back_flag=NO;
 	NSLog(@"each UI in tweak array is %@",array);
 	int count = [array count];
 	NSLog(@"each UI count is %d",count);
+	//另开一个线程读取脚本，同步读脚本和点击的过程
 	dispatch_queue_t read_queue = dispatch_queue_create("readscript", nil);
     dispatch_async(read_queue, ^{
 	int count_temp=0;
 	while(count_temp < count)
 	{
+		//TOUCH_PREFERENCE里保存
 		NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
 //		NSLog(@"each UI waitInfo is %@",waitInfo);
 		if([[waitInfo objectForKey:@"switch" ]isEqualToString:@"NO"] && count_temp !=0 )
@@ -417,6 +418,7 @@ BOOL back_flag=NO;
 			[NSThread sleepForTimeInterval:2];
 			continue;
 		}
+		//读取一条动作指令
 		actionInfo = [array[count_temp] copy];
 		NSLog(@"each UI in readscript actionInfo is %@",actionInfo);	
 		NSDictionary *dic = [[NSDictionary alloc]initWithObjectsAndKeys:@"NO",@"switch",@"YES",@"touch",@"NO",@"back",nil];
@@ -501,7 +503,7 @@ BOOL back_flag=NO;
 
 
 
-
+//跳转到某个app
 %new
 
 - (void)LaunchdAppCallBack:(NSString *)name userInfo:(NSDictionary *)userInfo{
@@ -534,28 +536,32 @@ BOOL back_flag=NO;
 %new
 - (void)simulateTouchText:(NSString *)type userInfo:(NSDictionary *)userInfo
 {
+	//获取一次点击操作
 	NSDictionary *TouchAction = [actionInfo copy];
 	NSLog(@"each UI in Text touch actionInfo is %@",TouchAction);
+	//根据getAbsFrame方法获取指定控件的绝对坐标
 	NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(getAbsFrame:userInfo:actionInfo:)];
-		NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-		//设置方法调用者
-		invocation.target = [[UIApplication sharedApplication]keyWindow];
-		//注意：这里的方法名一定要与方法签名类中的方法一致
-		invocation.selector = @selector(getAbsFrame:userInfo:actionInfo:);
-		//这里的Index要从2开始，以为0跟1已经被占据了，分别是self（target）,selector(_cmd)
-		[invocation setArgument:&type atIndex:2];
-		[invocation setArgument:&userInfo atIndex:3];
-		[invocation setArgument:&TouchAction atIndex:4];
-			 //3、调用invoke方法
-			NSLog(@"each UI in controller new queue");
-        	[invocation invoke];
-        	NSDictionary *res = nil;
-        	if (signature.methodReturnLength != 0) {//有返回值
-            	//将返回值赋值给res
-            	[invocation getReturnValue:&res];
-        	}
-        	NSDictionary *abs_point = res;
-        	NSLog(@"each UI in if abs_point is %@",abs_point);
+	NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+	//设置方法调用者
+	invocation.target = [[UIApplication sharedApplication]keyWindow];
+	//注意：这里的方法名一定要与方法签名类中的方法一致
+	invocation.selector = @selector(getAbsFrame:userInfo:actionInfo:);
+	//这里的Index要从2开始，以为0跟1已经被占据了，分别是self（target）,selector(_cmd)
+	[invocation setArgument:&type atIndex:2];
+	[invocation setArgument:&userInfo atIndex:3];
+	[invocation setArgument:&TouchAction atIndex:4];
+	 //3、调用invoke方法
+	NSLog(@"each UI in controller new queue");
+   	[invocation invoke];
+   	NSDictionary *res = nil;
+    if (signature.methodReturnLength != 0) {//有返回值
+      	//将返回值赋值给res
+      	[invocation getReturnValue:&res];
+      	}
+	//根据返回值获取绝对坐标
+   	NSDictionary *abs_point = res;
+   	NSLog(@"each UI in if abs_point is %@",abs_point);
+	//根据之前注册的方法实现控件点击
 	CPDistributedMessagingCenter *get_absFrame_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
     if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
             //7.0+
@@ -646,6 +652,8 @@ BOOL back_flag=NO;
 }
 
 %end
+
+//此后的代码不使用
 
 /*
 %hook SBSMSClass0Alert
