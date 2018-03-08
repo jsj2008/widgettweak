@@ -44,8 +44,7 @@ extern const CFStringRef kIOSurfacePixelFormat;
 -(NSDictionary *)getAbsFrame:(NSString *)type userInfo:(NSDictionary *)userInfo actionInfo:(NSDictionary *)actionInfo
 {
 	//获取点击信息
-	NSLog(@"each UI enter getAbsFrame function!!!");
-	NSLog(@"each UI userInfo is %@",userInfo);
+	NSLog(@"each UI in getAbsFrame widget is %@",userInfo);
 	NSString *touchText = [actionInfo objectForKey:@"text"];
 	[touchText stringByReplacingOccurrencesOfString:@"U" withString:@"u"];
 	NSLog(@"each UI in getAbsFrame actionInfo is %@",actionInfo);
@@ -78,10 +77,6 @@ extern const CFStringRef kIOSurfacePixelFormat;
 			{
 				NSLog(@"each UI xinhua net get");
 				flag = 1;
-			}
-			else if ([text rangeOfString:@"评论"].location != NSNotFound)
-			{
-				NSLog(@"each UI pinglun get");
 			}
         }
         int tail = (int)([tmp rangeOfString:@");"].location+1);
@@ -301,7 +296,7 @@ int lock =0;
    			 if (signature.methodReturnLength != 0) {//有返回值
           	//将返回值赋值给res
         		  [invocation getReturnValue:&res];
-  			      }
+  		    }
    		    NSString *widgetSet = res;
     		NSDictionary *widgetInfo = [[NSDictionary alloc]initWithObjectsAndKeys:widgetSet,@"widgetSet",nil];
     		[simulatetouch_Center sendMessageName:@"simulatetouchText" userInfo:widgetInfo];
@@ -421,6 +416,7 @@ BOOL back_flag=NO;
 		//读取一条动作指令
 		actionInfo = [array[count_temp] copy];
 		NSLog(@"each UI in readscript actionInfo is %@",actionInfo);	
+		[NSThread sleepForTimeInterval:1];
 		NSDictionary *dic = [[NSDictionary alloc]initWithObjectsAndKeys:@"NO",@"switch",@"YES",@"touch",@"NO",@"back",nil];
 		[dic writeToFile:TOUCH_PREFERENCE atomically:YES];
 		count_temp ++;		
@@ -515,22 +511,14 @@ BOOL back_flag=NO;
     [self launchApplicationWithIdentifier:appBundle suspended:YES];
     }
     else{
-    
     [self launchApplicationWithIdentifier:appBundle suspended:NO];
     }
-  
-
-    
 }
-
-
 %new
 
 - (void)LaunchdAppCallBack2:(NSString *)name userInfo:(NSDictionary *)userInfo{
     NSString *appBundle = [userInfo objectForKey:@"Bundle"];
     [self launchApplicationWithIdentifier:appBundle suspended:NO];
-    
-    
 }
 
 %new
@@ -567,27 +555,23 @@ BOOL back_flag=NO;
             //7.0+
             	rocketbootstrap_distributedmessagingcenter_apply(get_absFrame_Center);
       	}
-   	[get_absFrame_Center sendMessageName:@"simulatetouchDown" userInfo:abs_point];
-	NSLog(@"each UI touchDown complete!");
-	dispatch_queue_t read_queue = dispatch_queue_create("readscript", nil);
-    dispatch_async(read_queue, ^{	
-	[NSThread sleepForTimeInterval:2];
+	//创建一个同步线程队列是因为touch up可能会在touch down之前执行
+	dispatch_queue_t touch_queue = dispatch_queue_create("touch", nil);
+    dispatch_async(touch_queue, ^{	
+	[get_absFrame_Center sendMessageName:@"simulatetouchDown" userInfo:abs_point];
+    NSLog(@"each UI touchDown complete!");
+	[NSThread sleepForTimeInterval:1];
     [get_absFrame_Center sendMessageName:@"simulatetouchUp" userInfo:abs_point];
 	NSLog(@"each UI touchUp complete!");
-	});
 	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
-	[waitInfo setValue:@"YES" forKey:@"touch"];
+    [waitInfo setValue:@"YES" forKey:@"touch"];
 	if(back_flag==YES)
-	{
-		[waitInfo setValue:@"YES" forKey:@"back"];
-	}
-	[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
-
-
-
-	
+    {
+        [waitInfo setValue:@"YES" forKey:@"back"];
+    }
+    [waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+ });
 }
-
 
 %new
 - (void)simulateTouch:(NSString *)type userInfo:(NSDictionary *)userInfo
@@ -652,120 +636,4 @@ BOOL back_flag=NO;
 }
 
 %end
-
-//此后的代码不使用
-
-/*
-%hook SBSMSClass0Alert
-+(void)registerForAlerts
-{
-    NSLog(@"cancel Alert");
-
-}
-%end
-
-%hook SBAlertItemsController
-
--(void)activateAlertItem:(id)item
-{
-    if([[[[NSDictionary alloc]initWithContentsOfFile:PATH_PREFERENCE] objectForKey:@"mode"] isEqual: @"test"])
-    {
-        NSLog(@" -----  ------  弹出框隐藏------ -----");
-    }
-    else
-    {
-        %orig;
-    }
- }
-
-
-*/
-
-
-/*
-%hook SBScreenShotter
-
--(void)saveScreenshot:(BOOL)screenshot{
-
-   
-	if([[[NSDictionary dictionaryWithContentsOfFile:PATH_PREFERENCE] objectForKey:@"ISAPPTEST"] isEqual: @"YES"]||[[[NSDictionary dictionaryWithContentsOfFile:PATH_PREFERENCE] objectForKey:@"ISBROWSERTEST"] isEqual: @"YES"])
-    {
-        //%orig;
-    	NSString *PicName = [[NSDictionary dictionaryWithContentsOfFile:PATH_PREFERENCE] objectForKey:@"SCREENSHOT_NAME"];
-          
-    
-    //存图片
-
-        //iOS8截图保存
-      //  UIGraphicsBeginImageContext(self.view.bounds.size);
-      //   [self.view.layer renderInContext:UIGraphicsGetCurrentContext()];
-       //  UIImage *snapShotImage = UIGraphicsGetImageFromCurrentImageContext();
-         //UIGraphicsEndImageContext();
-
-        // UIImage *image = snapShotImage;
-         
-        IOMobileFramebufferConnection connect;
-    kern_return_t result;
-    CoreSurfaceBufferRef screenSurface = NULL;
-    io_service_t framebufferService = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleH1CLCD"));
-    if(!framebufferService)
-        framebufferService = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleM2CLCD"));
-    if(!framebufferService)
-        framebufferService = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleCLCD"));
-
-    result = IOMobileFramebufferOpen(framebufferService, mach_task_self(), 0, &connect);
-    result = IOMobileFramebufferGetLayerDefaultSurface(connect, 0, &screenSurface);
-
-    uint32_t aseed;
-    IOSurfaceLock((IOSurfaceRef)screenSurface, 0x00000001, &aseed);
-    size_t width = IOSurfaceGetWidth((IOSurfaceRef)screenSurface);
-
-    size_t height = IOSurfaceGetHeight((IOSurfaceRef)screenSurface);
-    CFMutableDictionaryRef dict;
-    size_t pitch = width*4, size = width*height*4;
-
-    int bPE=4;
-
-    char pixelFormat[4] = {'A','R','G','B'};
-    dict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    CFDictionarySetValue(dict, kIOSurfaceIsGlobal, kCFBooleanTrue);
-    CFDictionarySetValue(dict, kIOSurfaceBytesPerRow, CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pitch));
-    CFDictionarySetValue(dict, kIOSurfaceBytesPerElement, CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &bPE));
-    CFDictionarySetValue(dict, kIOSurfaceWidth, CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &width));
-    CFDictionarySetValue(dict, kIOSurfaceHeight, CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &height));
-    CFDictionarySetValue(dict, kIOSurfacePixelFormat, CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, pixelFormat));
-    CFDictionarySetValue(dict, kIOSurfaceAllocSize, CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &size));
-
-    IOSurfaceRef destSurf = IOSurfaceCreate(dict);
-    IOSurfaceAcceleratorRef outAcc;
-    IOSurfaceAcceleratorCreate(NULL, 0, &outAcc);
-
-    IOSurfaceAcceleratorTransferSurface(outAcc, (IOSurfaceRef)screenSurface, destSurf, dict, NULL);
-    IOSurfaceUnlock((IOSurfaceRef)screenSurface, kIOSurfaceLockReadOnly, &aseed);
-    CFRelease(outAcc);
-
-    CGDataProviderRef provider =  CGDataProviderCreateWithData(NULL,  IOSurfaceGetBaseAddress(destSurf), (width * height * 4), NULL);
-
-    CGImageRef cgImage = CGImageCreate(width, height, 8,8*4, IOSurfaceGetBytesPerRow(destSurf), CGColorSpaceCreateDeviceRGB(), kCGImageAlphaNoneSkipFirst |kCGBitmapByteOrder32Little, provider, NULL, YES, kCGRenderingIntentDefault);
-
-    UIImage *image = [UIImage imageWithCGImage:cgImage];
-    NSLog(@"PicName = %@",PicName);
-    if (![UIImagePNGRepresentation(image) writeToFile:PicName atomically:YES]) {
-            
-            UIAlertView *alert = [[UIAlertView alloc]initWithTitle:@"提示" message:@"截图失败" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-            [alert show];
-            
-        }
-
-    }
-    else{
-        %orig;
-    }
-
-
-
-}
-%end
-*/
-
 
