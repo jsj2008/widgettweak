@@ -26,6 +26,7 @@ extern const CFStringRef kIOSurfacePixelFormat;
 #define TOUCH_RE_PREFERENCE @"/var/mobile/Library/Preferences/com.lw.TouchRE.plist"
 #define TOUCH_WIDGET @"/var/mobile/Library/Preferences/com.lw.TouchWidget.plist"
 
+
 @interface SBScreenShotter : NSObject
 + (id)sharedInstance;
 - (void)saveScreenshot:(_Bool)arg1;
@@ -44,17 +45,17 @@ extern const CFStringRef kIOSurfacePixelFormat;
 -(NSDictionary *)getAbsFrame:(NSString *)type userInfo:(NSDictionary *)userInfo actionInfo:(NSDictionary *)actionInfo
 {
 	//获取点击信息
-	NSLog(@"each UI in getAbsFrame widget is %@",userInfo);
+//	NSLog(@"each UI in getAbsFrame widget is %@",userInfo);
 	NSString *touchText = [actionInfo objectForKey:@"text"];
 	[touchText stringByReplacingOccurrencesOfString:@"U" withString:@"u"];
-	NSLog(@"each UI in getAbsFrame actionInfo is %@",actionInfo);
+/*	NSLog(@"each UI in getAbsFrame actionInfo is %@",actionInfo);*/
     NSString *widgetSet = [userInfo objectForKey:@"widgetSet"];
-
      NSArray *UIArray_temp1 = [widgetSet componentsSeparatedByString:@"\n"];
      int count=[UIArray_temp1 count];
      NSMutableArray *UIArray = [NSMutableArray arrayWithCapacity:5];
      int count_temp = 0;
-
+	int iii=0;
+	iii++;
      while(count_temp < count -1 )
      {
         NSString *tmp = [UIArray_temp1 objectAtIndex:count_temp];
@@ -71,18 +72,15 @@ extern const CFStringRef kIOSurfacePixelFormat;
             NSString *text_start = [tmp substringFromIndex:text_s];
             int text_e = (int)([text_start rangeOfString:@"'"].location);
             text = [text_start substringToIndex:text_e];
-            NSLog(@"each UI text exists!!!");
-            NSLog(@"each UI text is %@",text);
 			if([text rangeOfString:touchText].location != NSNotFound)
 			{
-				NSLog(@"each UI xinhua net get");
+				NSLog(@"each UI target get");
 				flag = 1;
 			}
         }
         int tail = (int)([tmp rangeOfString:@");"].location+1);
         NSString *slice_tmp = [tmp substringToIndex:tail];
         NSString *slice = [slice_tmp stringByReplacingOccurrencesOfString:@"|" withString:@""];
- //       NSLog(@"each UI:%@",slice);
 
         //Fetch UI Name
         int Name_start = (int)([slice rangeOfString:@"<"].location + 1);
@@ -101,9 +99,7 @@ extern const CFStringRef kIOSurfacePixelFormat;
         NSString *Name = [nameStart substringToIndex:Name_end];
         int level_num = floor(Name_start/4);
         NSString *level = [[NSString alloc]initWithFormat:@"%d",level_num];
-        //NSLog(@"each UI Name is %@",Name);
         NSString *stringWithoutName = [nameStart substringFromIndex:Name_end];
-        //NSLog(@"each UI level is %@",level);
 
         //Fetch UI address
         int Address_start = (int)[stringWithoutName rangeOfString:@"0x"].location;
@@ -120,7 +116,6 @@ extern const CFStringRef kIOSurfacePixelFormat;
                 continue;
 	  	}
         NSString *Address = [addressStart substringToIndex:Address_end];
-        //NSLog(@"each UI Address is %@",Address);
         NSString *stringWithoutAddress = [addressStart substringFromIndex:Address_end];
 
         //Fetch Position_X
@@ -253,7 +248,6 @@ if(Size_X_end == -1)
 		count_temp ++;			
 		
 	}
-	NSLog(@"each UI getabs will return ");
 	return nil;
 }
 
@@ -276,12 +270,13 @@ int lock =0;
 		lock=1;
 	}
 	 NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+	 //int waitTime = [[waitInfo objectForKey:@"waitTime"] intValue];
+	 //int waitCount = [[waitInfo objectForKey:@"waitCount"]intValue]; 
 	//读取一条动作记录之后，调用recursiveDescription获取当前界面的控件树
-     if([[waitInfo objectForKey:@"switch" ]isEqualToString:@"NO"]&&[[waitInfo objectForKey:@"touch"]isEqualToString:@"YES"] )
+     if([[waitInfo objectForKey:@"read" ]isEqualToString:@"NO"]&&[[waitInfo objectForKey:@"touch"]isEqualToString:@"NO"] )
       {
 			NSLog(@"each UI in viewDidAppear if ");
 		    NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(recursiveDescription)];
-			NSLog(@"each UI in viewDidAppear sig is %@",signature);
    			 NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
     		//设置方法调用者
    		 	invocation.target =  [UIApplication sharedApplication].keyWindow;
@@ -299,10 +294,39 @@ int lock =0;
   		    }
    		    NSString *widgetSet = res;
     		NSDictionary *widgetInfo = [[NSDictionary alloc]initWithObjectsAndKeys:widgetSet,@"widgetSet",nil];
-    		[simulatetouch_Center sendMessageName:@"simulatetouchText" userInfo:widgetInfo];
-			[waitInfo setValue:@"YES" forKey:@"switch"];
-			[waitInfo setValue:@"NO" forKey:@"touch"];
-			[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+			if([widgetSet rangeOfString:[waitInfo objectForKey:@"check"]].location!=NSNotFound)
+			{
+				[simulatetouch_Center sendMessageName:@"simulatetouchText" userInfo:widgetInfo];
+				[waitInfo setValue:@"YES" forKey:@"touch"];
+				[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+
+			}
+			else
+			{
+				NSLog(@"each UI check-text in viewDidAppear do not appear!!!");
+			}
+		}
+		else
+		{
+			NSMethodSignature  *signature = [UIWindow instanceMethodSignatureForSelector:@selector(recursiveDescription)];
+             NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+            //设置方法调用者
+            invocation.target =  [UIApplication sharedApplication].keyWindow;
+            //注意：这里的方法名一定要与方法签名类中的方法一致
+             invocation.selector = @selector(recursiveDescription);
+             //这里的Index要从2开始，以为0跟1已经被占据了，分别是self（target）,selector(_cmd)
+             /* NSString *type = @"111";
+            [invocation setArgument:&type atIndex:2];
+            [invocation setArgument:&text atIndex:3];   */
+            [invocation invoke];
+            NSString *res = nil;
+             if (signature.methodReturnLength != 0) {//有返回值
+            //将返回值赋值给res
+                  [invocation getReturnValue:&res];
+            }
+            NSString *widgetSet = res;
+            NSDictionary *widgetInfo = [[NSDictionary alloc]initWithObjectsAndKeys:widgetSet,@"widgetSet",nil];
+            [widgetInfo writeToFile:TOUCH_WIDGET atomically:YES];
 		}
 }
 %end
@@ -311,22 +335,25 @@ int lock =0;
 
 int r=0;//模拟点击的pathindex
 NSDictionary *actionInfo;
-BOOL back_flag=NO;
+int action_count=0;
+int action_temp=0;
+CPDistributedMessagingCenter *touchtext_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
+int lock1=0;
 
 -(void)applicationDidFinishLaunching:(id)application 
 {
     NSLog(@"*************** in spring board ***********");
     %orig;
     NSLog(@"hello");
-
+	//int cycle_count = 5;
+	float cycle_interval = 36000.0;
     
         //创建偏好文件
     NSDictionary *preference = [[NSDictionary alloc]initWithObjectsAndKeys:@"normal",@"mode", nil];
     [preference writeToFile:PATH_PREFERENCE atomically:YES];
     
 
-//
-//    //launchdapp_app
+    //launchdapp_app
     
     CPDistributedMessagingCenter *Launchdapp_center = [CPDistributedMessagingCenter centerNamed:@"launchdapp_app"];
     if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
@@ -352,7 +379,7 @@ BOOL back_flag=NO;
 
 
 
-
+   //后台启动程序
     CPDistributedMessagingCenter *Launchdapp_center2 = [CPDistributedMessagingCenter centerNamed:@"launchdapp_app2"];
     if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
         //7.0+
@@ -379,9 +406,55 @@ BOOL back_flag=NO;
 	[simulatetouch_center registerForMessageName:@"getWidget" target:self selector:@selector(getAbsFrame:userInfo:)];
     NSLog(@"模拟点击服务器开启");
 
+	NSDictionary *bundle = [[NSDictionary alloc]initWithObjectsAndKeys:@"com.mqr.BlockTest",@"Bundle", nil];
+	NSRunLoop *loop = [NSRunLoop currentRunLoop];
+	NSLog(@"BlockTest!!! in applicationdidFinishLaunching bundle is %@",bundle);
+    NSTimer *timer = [NSTimer  timerWithTimeInterval:cycle_interval target:self selector:@selector(awakeApp:) userInfo:bundle repeats:YES];
+    [loop addTimer:timer forMode:NSDefaultRunLoopMode];
+    [loop run];
+
 
 }
 
+%new
+- (void)awakeApp:(NSTimer *)timer{
+    CPDistributedMessagingCenter *Launchapp_Center3 = [CPDistributedMessagingCenter centerNamed:@"launchdapp_app2"];
+	NSDictionary *appbundle = [timer userInfo];
+	NSLog(@"BlockTest!!! in awake userInfo is %@",appbundle);
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
+        //7.0+
+        rocketbootstrap_distributedmessagingcenter_apply(Launchapp_Center3);
+    }
+    [Launchapp_Center3 sendMessageName:@"launchdapp_app2" userInfo:appbundle];
+    NSLog(@"nana: in awakeApp");
+}
+
+%new
+-(void)touchExistText
+{
+	if(lock1 ==0)
+    {
+        rocketbootstrap_distributedmessagingcenter_apply(touchtext_Center);
+        lock1=1;
+    }	
+	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+	if([[waitInfo objectForKey:@"read"]isEqualToString:@"NO"]&&[[waitInfo objectForKey:@"touch"]isEqualToString:@"NO"]&&(![[waitInfo objectForKey:@"text"]isEqualToString:@""]))
+	{
+		NSLog(@"each UI in touchExistText !!!!!!!!!!!!!  waitInfo is %@",waitInfo);	
+		NSDictionary *widgetInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_WIDGET];
+	    NSString *widgetSet = [widgetInfo objectForKey:@"widgetSet"];
+		if([widgetSet rangeOfString:[waitInfo objectForKey:@"check"]].location!=NSNotFound)
+     	{
+        	[simulatetouch_Center sendMessageName:@"simulatetouchText" userInfo:widgetInfo];
+          	[waitInfo setValue:@"YES" forKey:@"touch"];
+          	[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+     	}
+     	else
+     	{
+        	  NSLog(@"each UI in touchExist check-text do not appear!!!");
+     	}
+	}			
+}
 
 
 //读取脚本
@@ -389,40 +462,73 @@ BOOL back_flag=NO;
 -(void)readscript:(NSString *)type userInfo:(NSDictionary *)userInfo
 {
 	NSArray *array = [userInfo objectForKey:@"task"];
-	NSString *appBundle = [userInfo objectForKey:@"Bundle"];
-	NSLog(@"each UI appBundle is %@",appBundle);
-	NSLog(@"each UI in tweak array is %@",array);
+	//NSString *appBundle = [userInfo objectForKey:@"Bundle"];
 	int count = [array count];
-	NSLog(@"each UI count is %d",count);
+    action_count = count;
 	//另开一个线程读取脚本，同步读脚本和点击的过程
 	dispatch_queue_t read_queue = dispatch_queue_create("readscript", nil);
     dispatch_async(read_queue, ^{
 	int count_temp=0;
+	NSDictionary *dic = [[NSDictionary alloc]initWithObjectsAndKeys:@"NO",@"read",@"NO",@"touch",@"null",@"check",@"null",@"text",@"null",@"waitCount",@"null",@"waitTime",@"NO",@"back",nil];
+	[dic writeToFile:TOUCH_PREFERENCE atomically:YES];
 	while(count_temp < count)
 	{
 		//TOUCH_PREFERENCE里保存
 		NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
-//		NSLog(@"each UI waitInfo is %@",waitInfo);
-		if([[waitInfo objectForKey:@"switch" ]isEqualToString:@"NO"] && count_temp !=0 )
+		if([[waitInfo objectForKey:@"read" ]isEqualToString:@"NO"] && count_temp !=0 )
 		{	
-			[NSThread sleepForTimeInterval:2];
+			[NSThread sleepForTimeInterval:2];		
 			continue;
 		}
-		if([[waitInfo objectForKey:@"touch"]isEqualToString:@"NO"]&& count_temp !=0)
-		{
-			[NSThread sleepForTimeInterval:2];
-			continue;
-		}
+		NSLog(@"each UI in readscript count_temp: %d waitInfo is %@",count_temp,waitInfo);
 		//读取一条动作指令
 		actionInfo = [array[count_temp] copy];
-		NSLog(@"each UI in readscript actionInfo is %@",actionInfo);	
-		[NSThread sleepForTimeInterval:1];
-		NSDictionary *dic = [[NSDictionary alloc]initWithObjectsAndKeys:@"NO",@"switch",@"YES",@"touch",@"NO",@"back",nil];
-		[dic writeToFile:TOUCH_PREFERENCE atomically:YES];
-		count_temp ++;		
+		NSLog(@"each UI in readscript actionInfo is %@",actionInfo);
+        [waitInfo setValue:@"NO" forKey:@"read"];
+        [waitInfo setValue:@"NO" forKey:@"touch"];	
+		[waitInfo setValue:[actionInfo objectForKey:@"waitTime"] forKey:@"waitTime"];
+        [waitInfo setValue:[actionInfo objectForKey:@"waitCount"] forKey:@"waitCount"];
+		if([[actionInfo objectForKey:@"type"]isEqualToString:@"click"])
+		{
+			if(![[actionInfo objectForKey:@"check"]isEqualToString:@""]) //按照控件点击
+        	{
+				[waitInfo setValue:[actionInfo objectForKey:@"text"] forKey:@"text"];
+				[waitInfo setValue:[actionInfo objectForKey:@"check"] forKey:@"check"];
+            	[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+            	NSLog(@"each UI send Script to viewDidAppear");
+				NSLog(@"each UI read touch text waitInfo is %@",[NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE]);
+			    NSRunLoop *loop = [NSRunLoop currentRunLoop];
+    			NSTimer *timer = [NSTimer  timerWithTimeInterval:3 target:self selector:@selector(touchExistText) userInfo:nil repeats:NO];
+    			[loop addTimer:timer forMode:NSDefaultRunLoopMode];
+    			[loop run];
+        	}
+        	else if(![[actionInfo objectForKey:@"x"]isEqualToString:@""]) //按照坐标点击
+        	{
+            	NSLog(@"each UI in read will simulateTouch point");
+            	[NSThread sleepForTimeInterval:6];
+				[waitInfo setValue:@"" forKey:@"text"];
+                [waitInfo setValue:@"" forKey:@"check"];
+            	NSDictionary *abs_point = [[NSDictionary alloc]initWithObjectsAndKeys:[actionInfo objectForKey:@"x"],@"xPoint",[actionInfo objectForKey:@"y"],@"yPoint",nil];
+            	NSLog(@"each UI will simulateTouch abs_point is %@",abs_point);
+         		[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+				NSLog(@"each UI read touch point waitInfo is %@",[NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE]);
+			   	[self performSelector:@selector(simulateTouchPoint:) withObject:abs_point];
+        	}	
+		}
+		else if([[actionInfo objectForKey:@"type"]isEqualToString:@"swipe"])
+		{
+			NSLog(@"each UI in readscript in swipe!!!");
+			[NSThread sleepForTimeInterval:6];
+			[waitInfo setValue:@"" forKey:@"text"];
+            [waitInfo setValue:@"" forKey:@"check"];
+            NSDictionary *abs_point = [[NSDictionary alloc]initWithObjectsAndKeys:[actionInfo objectForKey:@"x1"],@"xPoint_from",[actionInfo objectForKey:@"x2"],@"xPoint_to",[actionInfo objectForKey:@"y1"],@"yPoint_from",[actionInfo objectForKey:@"y2"],@"yPoint_to",@"2.0",@"duration",nil];
+            NSLog(@"each UI will simulateSwipe abs_point is %@",abs_point);
+			[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+            NSLog(@"each UI read swipe waitInfo is %@",[NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE]);
+			[self performSelector:@selector(simulateSwipe:) withObject:abs_point];
+		}
+			count_temp ++;		
 	}
-	back_flag=YES;
-	
 	});
 	
 }
@@ -517,13 +623,71 @@ BOOL back_flag=NO;
 %new
 
 - (void)LaunchdAppCallBack2:(NSString *)name userInfo:(NSDictionary *)userInfo{
-    NSString *appBundle = [userInfo objectForKey:@"Bundle"];
+	NSString *appBundle = [userInfo objectForKey:@"Bundle"];
     [self launchApplicationWithIdentifier:appBundle suspended:NO];
 }
 
 %new
+- (void)simulateTouchPoint:(NSDictionary *)abs_point
+{
+	action_temp ++;
+	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+	NSLog(@"each UI in simulateTouchPoint waitInfo is %@",waitInfo);
+	[waitInfo setValue:@"NO" forKey:@"touch"];
+    [waitInfo setValue:@"YES" forKey:@"read"];
+    [waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];	
+	CPDistributedMessagingCenter *touchPoint_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
+            //7.0+
+                rocketbootstrap_distributedmessagingcenter_apply(touchPoint_Center);
+        }
+	[NSThread sleepForTimeInterval:1];
+	[touchPoint_Center sendMessageName:@"simulatetouchDown" userInfo:abs_point];		
+	[NSThread sleepForTimeInterval:3];
+	[touchPoint_Center sendMessageName:@"simulatetouchUp" userInfo:abs_point];
+	NSLog(@"each UI action_temp=%d !!! action_count=%d !!!",action_temp,action_count);
+	if(action_temp == action_count)
+    {
+        [waitInfo setValue:@"YES" forKey:@"back"];
+        NSLog(@"each UI write back YES to file");
+        [waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+        //有时候写文件会出错也不知道为啥，就先用这么一个笨办法再写一遍吧
+        NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+        NSLog(@"each UI finally TOUCH_PREFERENCE is %@",dict);
+        if([[dict objectForKey:@"back"]isEqualToString:@"NO"])
+        {
+            [dict setValue:@"YES" forKey:@"back"];
+        }
+         [dict writeToFile:TOUCH_PREFERENCE atomically:YES];
+        action_temp=0;
+    }
+    NSLog(@"each UI in simulateTouchPoint write read YES touch NO to preference");
+}
+
+%new
+- (void)simulateSwipe:(NSDictionary *)abs_point
+{
+	action_temp++;
+	NSLog(@"each UI in simulateSwipe!!!");
+	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+    [waitInfo setValue:@"NO" forKey:@"touch"];
+    [waitInfo setValue:@"YES" forKey:@"read"];
+    [waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+    CPDistributedMessagingCenter *swipe_Center = [CPDistributedMessagingCenter centerNamed:@"simulatetouch"];
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7.0f){
+            //7.0+
+                rocketbootstrap_distributedmessagingcenter_apply(swipe_Center);
+        }
+    [NSThread sleepForTimeInterval:1];
+	[swipe_Center sendMessageName:@"simulateSwipe" userInfo:abs_point];
+	NSLog(@"each UI action_temp=%d !!! action_count=%d !!!",action_temp,action_count);
+}
+
+
+%new
 - (void)simulateTouchText:(NSString *)type userInfo:(NSDictionary *)userInfo
 {
+	action_temp ++;
 	//获取一次点击操作
 	NSDictionary *TouchAction = [actionInfo copy];
 	NSLog(@"each UI in Text touch actionInfo is %@",TouchAction);
@@ -539,7 +703,6 @@ BOOL back_flag=NO;
 	[invocation setArgument:&userInfo atIndex:3];
 	[invocation setArgument:&TouchAction atIndex:4];
 	 //3、调用invoke方法
-	NSLog(@"each UI in controller new queue");
    	[invocation invoke];
    	NSDictionary *res = nil;
     if (signature.methodReturnLength != 0) {//有返回值
@@ -555,21 +718,46 @@ BOOL back_flag=NO;
             //7.0+
             	rocketbootstrap_distributedmessagingcenter_apply(get_absFrame_Center);
       	}
+
+	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+    NSLog(@"each UI in simulateTouchText waitInfo is %@",waitInfo);
+	[waitInfo setValue:@"NO" forKey:@"touch"];
+    [waitInfo setValue:@"YES" forKey:@"read"];
+    [waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
 	//创建一个同步线程队列是因为touch up可能会在touch down之前执行
 	dispatch_queue_t touch_queue = dispatch_queue_create("touch", nil);
     dispatch_async(touch_queue, ^{	
+	[NSThread sleepForTimeInterval:1];
 	[get_absFrame_Center sendMessageName:@"simulatetouchDown" userInfo:abs_point];
     NSLog(@"each UI touchDown complete!");
-	[NSThread sleepForTimeInterval:1];
+	[NSThread sleepForTimeInterval:3];
     [get_absFrame_Center sendMessageName:@"simulatetouchUp" userInfo:abs_point];
 	NSLog(@"each UI touchUp complete!");
-	NSDictionary *waitInfo = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
-    [waitInfo setValue:@"YES" forKey:@"touch"];
-	if(back_flag==YES)
+	NSLog(@"each UI action_temp=%d !!! action_count=%d !!!",action_temp,action_count);
+	if(action_temp == action_count)
     {
         [waitInfo setValue:@"YES" forKey:@"back"];
+		NSLog(@"each UI write back YES to file");
+		[waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+		//有时候写文件会出错也不知道为啥，就先用这么一个笨办法再写一遍吧
+		NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+		NSLog(@"each UI finally TOUCH_PREFERENCE is %@",dict);
+		if([[dict objectForKey:@"back"]isEqualToString:@"NO"])
+		{
+			[dict setValue:@"YES" forKey:@"back"];
+		}
+		 [dict writeToFile:TOUCH_PREFERENCE atomically:YES];
+		action_temp=0;
     }
-    [waitInfo writeToFile:TOUCH_PREFERENCE atomically:YES];
+	NSLog(@"each UI in simulateTouchText  write read YES touch NO to preference");
+	//有时候写文件会出错也不知道为啥，就先用这么一个笨办法再写一遍吧
+        NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
+        NSLog(@"each UI after touch text TOUCH_PREFERENCE is %@",dict);
+        if([[dict objectForKey:@"read"]isEqualToString:@"NO"])
+        {
+            [dict setValue:@"YES" forKey:@"read"];
+        }
+         [dict writeToFile:TOUCH_PREFERENCE atomically:YES];
  });
 }
 
@@ -577,9 +765,6 @@ BOOL back_flag=NO;
 - (void)simulateTouch:(NSString *)type userInfo:(NSDictionary *)userInfo
 {
     NSLog(@"*************each UI Touch type = %@***********",type);
-	NSDictionary *dic_be=[NSDictionary dictionaryWithContentsOfFile:TOUCH_PREFERENCE];
-    [dic_be setValue:@"YES" forKey:@"touchcheck"];
-    [dic_be writeToFile:TOUCH_PREFERENCE atomically:YES];
     if([type isEqualToString:[NSString stringWithFormat:@"simulatetouchDown"]])
     {
         NSString *xPoint = [NSString stringWithFormat:@"%@",[userInfo objectForKey:@"xPoint"]];
